@@ -19,6 +19,7 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import com.waterlabs.ai.dto.PropertyDTO;
 import com.waterlabs.ai.dto.ScrapeFiltersDTO;
 import com.waterlabs.ai.exceptions.ScrapperFailedException;
+import com.waterlabs.ai.util.PropertyPriceParser;
 
 @Service
 public class PlayWrightService {
@@ -33,9 +34,12 @@ public class PlayWrightService {
 
 
     private final Playwright playwright;
+    
+    private final PropertyPriceParser propertyPriceParser;
 
-    public PlayWrightService(Playwright playwright) {
+    public PlayWrightService(Playwright playwright, PropertyPriceParser propertyPriceParser) {
         this.playwright = playwright;
+        this.propertyPriceParser = propertyPriceParser;
     }
 
     public List<PropertyDTO> getPropertyDetails(ScrapeFiltersDTO filters) {
@@ -184,7 +188,7 @@ public class PlayWrightService {
                 }
 
                 int floor = parseFloor(floorText);
-                int price = parsePrice(priceText);
+                int price = propertyPriceParser.parsePrice(priceText);
 
                 // Cheap filters first — skip the expensive detail-page visit if these already fail
                 if (floor < filters.minFloor() || price < filters.minBudget() || price > filters.maxBudget()) {
@@ -227,11 +231,7 @@ public class PlayWrightService {
         }
     }
 
-    private int parsePrice(String priceText) {
-        if (priceText == null) return -1;
-        String digits = priceText.replaceAll("[^0-9]", "");
-        return digits.isEmpty() ? -1 : Integer.parseInt(digits);
-    }
+    
 
     private int parseFloor(String floorText) {
         if (floorText == null || floorText.isBlank()) return -1;

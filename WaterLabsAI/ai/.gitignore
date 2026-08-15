@@ -4,6 +4,16 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+
+# Playwright browser binaries (~300MB, downloaded automatically)
+playwright-browsers/
+%USERPROFILE%/.cache/ms-playwright/
+
+# Environment files
+.env
+.env.*
+!.env.template
+
 ### STS ###
 .apt_generated
 .classpath

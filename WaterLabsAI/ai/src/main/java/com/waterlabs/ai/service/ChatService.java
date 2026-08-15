@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import com.waterlabs.ai.exceptions.AiCallFailedException;
 
+import reactor.core.publisher.Flux;
+
 @Service
 public class ChatService {
 
@@ -48,5 +50,30 @@ public class ChatService {
 				? response.getMetadata().getUsage() : "N/A");
 
 		return response;
+	}
+
+	public Flux<String> streamingChat(String query, String additionalPrompt) {
+		StringBuilder prompt = new StringBuilder(query);
+
+		if (additionalPrompt != null && !additionalPrompt.isBlank()) {
+			prompt.append("\n\nAdditional instructions:\n").append(additionalPrompt);
+		}
+
+		log.debug("Streaming to AI — conversationId={} messageLength={}", CONVERSATION_ID, prompt.length());
+
+		try {
+			return chatClient.prompt()
+					.user(prompt.toString())
+					.advisors(memoryAdvisor)
+					.advisors(a -> a.param(ChatMemory.CONVERSATION_ID, CONVERSATION_ID))
+					.stream()
+					.content()
+					.doOnError(ex -> log.error("Streaming AI call failed: {}", ex.getMessage(), ex))
+					.onErrorMap(ex -> new AiCallFailedException(
+							"AI streaming service is unavailable. Please try again later.", ex));
+		} catch (Exception ex) {
+			log.error("Failed to initiate streaming AI call: {}", ex.getMessage(), ex);
+			throw new AiCallFailedException("AI streaming service is unavailable. Please try again later.", ex);
+		}
 	}
 }

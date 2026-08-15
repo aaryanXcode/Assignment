@@ -686,7 +686,7 @@
             if (data.length > 0) {
                 const summary = buildPropertySummary(data);
                 const systemMsg = `Here are the scraped properties:\n\n${summary}`;
-                await sendToAI(systemMsg, `✅ Found ${data.length} matching properties. I've sent the data to the AI — feel free to ask anything!`, additionalPrompt || null);
+                await sendToAIStreaming(systemMsg, `✅ Found ${data.length} matching properties. I've sent the data to the AI — feel free to ask anything!`, additionalPrompt || null);
             } else {
                 appendAIMessage('😕 No properties matched the current filters. Try broadening your search criteria.');
             }
@@ -743,8 +743,122 @@
         appendUserMessage(query);
         input.value = '';
 
-        await sendToAI(query);
+        //await sendToAI(query);
+		await sendToAIStreaming(query);
     }
+	
+	async function sendToAIStreaming(query, uiNote = null, additionalPrompt = null) {
+
+	    const btn = document.getElementById("sendBtn");
+	    btn.disabled = true;
+
+	    const typingId = appendTypingIndicator();
+
+	    try {
+	        let url = "/streaming/chat?query=" + encodeURIComponent(query);
+	        if (additionalPrompt) {
+	            url += "&additionalPrompt=" + encodeURIComponent(additionalPrompt);
+	        }
+
+	        const res = await fetch(url);
+	        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+	        if (!res.body) throw new Error("No response body (stream unsupported)");
+
+	        removeTypingIndicator(typingId);
+
+	        if (uiNote) appendAIMessageStreaming(uiNote);
+
+	        const aiMessage = appendAIMessageStreaming("");
+
+	        const reader = res.body.getReader();
+	        const decoder = new TextDecoder();
+	        let buffer = "";
+	        let fullText = "";
+
+	        const processEvent = (event) => {
+	            // Reconstruct multi-line SSE data per spec: join data: lines with \n
+	            const dataLines = event
+	                .split("\n")
+	                .filter(line => line.startsWith("data:"))
+	                .map(line => line.slice(5));
+
+	            if (dataLines.length === 0) return;
+
+	            const token = dataLines.join("\n");
+	            fullText += token;
+
+	            aiMessage.innerHTML = fullText
+	                .replace(/&/g, "&amp;")
+	                .replace(/</g, "&lt;")
+	                .replace(/>/g, "&gt;")
+	                .replace(/\n/g, "<br>");
+
+	            const box = document.getElementById("chatMessages");
+	            box.scrollTop = box.scrollHeight;
+	        };
+
+	        try {
+	            while (true) {
+	                const { done, value } = await reader.read();
+	                if (done) break;
+
+	                buffer += decoder.decode(value, { stream: true });
+
+	                const events = buffer.split("\n\n");
+	                buffer = events.pop(); // keep incomplete trailing event
+
+	                for (const event of events) {
+	                    processEvent(event);
+	                }
+	            }
+
+	            // Flush whatever's left after the stream closes
+	            buffer += decoder.decode(); // flush any pending multi-byte chars
+	            if (buffer.trim()) {
+	                processEvent(buffer);
+	            }
+
+	        } catch (streamErr) {
+	            // Browser throws AbortError / TypeError "network error" when the server
+	            // closes the SSE connection after the Flux completes — this is normal.
+	            // Only re-throw if we haven't received any content yet.
+	            if (!fullText) throw streamErr;
+	        }
+
+	        // Stream complete — render the full text as markdown in one shot
+	        aiMessage.innerHTML = marked.parse(fullText);
+	        document.getElementById("chatMessages").scrollTop =
+	            document.getElementById("chatMessages").scrollHeight;
+
+	    } catch (err) {
+	        removeTypingIndicator(typingId);
+	        appendAIMessageStreaming(`⚠️ Could not reach AI: ${err.message}`);
+	    } finally {
+	        btn.disabled = false;
+	    }
+	}
+	
+	function appendAIMessageStreaming(initialText = "") {
+
+	    const box = document.getElementById("chatMessages");
+
+	    const wrapper = document.createElement("div");
+
+	    wrapper.innerHTML = `
+	        <div class="msg-label">AI</div>
+	        <div class="msg msg-ai"></div>
+	    `;
+
+	    const message = wrapper.querySelector(".msg-ai");
+
+	    message.innerHTML = marked.parse(initialText);
+
+	    box.appendChild(wrapper);
+
+	    box.scrollTop = box.scrollHeight;
+
+	    return message;
+	}
 
     async function sendToAI(query, uiNote = null, additionalPrompt = null) {
         const btn = document.getElementById('sendBtn');
