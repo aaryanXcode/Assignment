@@ -1,0 +1,38 @@
+# Git version control
+.git
+.gitignore
+
+# IDE & Editor settings
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Build output directories (Maven / Gradle)
+target/
+build/
+.gradle/
+
+# Log files and temp files
+*.log
+tmp/
+temp/
+
+# Environment and sensitive configuration files
+.env
+*.pem
+*.key
+
+# Documentation & Markdown files
+README.md
+*.md
+docs/
+
+# OS-specific metadata
+.DS_Store
+Thumbs.db
+
+
+### VS Code ###
