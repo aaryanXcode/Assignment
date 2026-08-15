@@ -15,7 +15,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./ai
+        working-directory: ./WaterLabsAI/ai
 
     steps:
       - name: Checkout source code
@@ -27,7 +27,7 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
-          cache-dependency-path: ai/pom.xml
+          cache-dependency-path: WaterLabsAI/ai/pom.xml
 
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
