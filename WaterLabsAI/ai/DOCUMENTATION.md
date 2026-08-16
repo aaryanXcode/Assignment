@@ -729,4 +729,6 @@ Spring AI auto-configures a `ChatClient` bean. `ChatClientConfig` also defines o
 
 ---
 
-*Documentation generated for WaterLabs Property AI v0.0.1-SNAPSHOT*
+*Documentation generated for WaterLabs Property AI v0.0.1-SNAPSHOT*,
+*CI Pipeline added with Github Actions*
+
