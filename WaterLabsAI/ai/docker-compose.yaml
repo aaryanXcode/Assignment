@@ -1,0 +1,7 @@
+services:
+  waterlabsai:
+    image: aryan0836/waterlabsai:latest
+    container_name: waterlabsai
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
